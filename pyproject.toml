@@ -1,0 +1,22 @@
+[project]
+name = "hikorobo2026-control-server"
+version = "0.1.0"
+description = "MAVLink GCS / control server for hikorobo2026_controller"
+readme = "README.md"
+authors = [
+    { name = "shunsei-t", email = "shunsei3t6@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.139.0",
+    "pydantic-settings>=2.14.2",
+    "pymavlink>=2.4.49",
+    "uvicorn[standard]>=0.51.0",
+]
+
+[project.scripts]
+hikorobo2026-control-server = "hikorobo2026_control_server:main"
+
+[build-system]
+requires = ["uv_build>=0.11.28,<0.12.0"]
+build-backend = "uv_build"

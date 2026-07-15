@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>hikorobo2026 Control Server</title>
+  <style>
+    :root {
+      --bg: #102018;
+      --panel: #183026;
+      --ink: #e7f2ea;
+      --muted: #9bb5a6;
+      --accent: #57c48a;
+      --warn: #e0a45c;
+      --danger: #e07171;
+      --line: rgba(231, 242, 234, 0.12);
+      --mono: "IBM Plex Mono", "Cascadia Mono", Consolas, monospace;
+      --sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(87, 196, 138, 0.18), transparent 40%),
+        linear-gradient(160deg, #0c1712, var(--bg) 45%, #13261c);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+    header {
+      padding: 1.25rem 1.5rem 0.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: 0.02em;
+    }
+    header p {
+      margin: 0.35rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 0.65rem;
+      height: 0.65rem;
+      border-radius: 50%;
+      margin-right: 0.4rem;
+      background: var(--danger);
+      vertical-align: middle;
+    }
+    .status-dot.ok { background: var(--accent); box-shadow: 0 0 10px rgba(87,196,138,0.7); }
+    main {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 1rem;
+      padding: 1rem 1.5rem 1.5rem;
+    }
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; }
+    }
+    section {
+      background: color-mix(in srgb, var(--panel) 88%, black);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    section h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .grid-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.75rem;
+    }
+    .metric {
+      padding: 0.75rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.15);
+    }
+    .metric .label { color: var(--muted); font-size: 0.75rem; }
+    .metric .value {
+      margin-top: 0.25rem;
+      font-family: var(--mono);
+      font-size: 1.2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.35rem 0.25rem;
+      border-bottom: 1px solid var(--line);
+    }
+    th { color: var(--muted); font-weight: 500; }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    input, button, select {
+      font: inherit;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.25);
+      color: var(--ink);
+      padding: 0.45rem 0.65rem;
+    }
+    input { min-width: 7rem; }
+    button {
+      cursor: pointer;
+      background: color-mix(in srgb, var(--accent) 28%, transparent);
+      border-color: color-mix(in srgb, var(--accent) 55%, white 10%);
+    }
+    button.secondary {
+      background: transparent;
+    }
+    button:hover { filter: brightness(1.08); }
+    #msg {
+      min-height: 1.4rem;
+      color: var(--warn);
+      font-size: 0.85rem;
+    }
+    #paramTableBody tr td:last-child { white-space: nowrap; }
+    .full { grid-column: 1 / -1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><span id="connDot" class="status-dot"></span>hikorobo2026 Control Server</h1>
+    <p id="subtitle">MAVLink over UDP — waiting for ESP32…</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Flight / Attitude</h2>
+      <div class="grid-metrics">
+        <div class="metric"><div class="label">State</div><div class="value" id="flightState">--</div></div>
+        <div class="metric"><div class="label">Roll [deg]</div><div class="value" id="roll">--</div></div>
+        <div class="metric"><div class="label">Pitch [deg]</div><div class="value" id="pitch">--</div></div>
+        <div class="metric"><div class="label">Yaw [deg]</div><div class="value" id="yaw">--</div></div>
+        <div class="metric"><div class="label">Pressure [hPa]</div><div class="value" id="pressure">--</div></div>
+        <div class="metric"><div class="label">Rel Alt [m]</div><div class="value" id="alt">--</div></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Connection</h2>
+      <div class="row">
+        <input id="vehicleHost" placeholder="vehicle host" value="192.168.0.15">
+        <input id="vehiclePort" type="number" value="1234" min="1" max="65535">
+        <button type="button" id="btnVehicle">Set target</button>
+      </div>
+      <div class="row">
+        <button type="button" id="btnParamList">Request PARAM list</button>
+        <button type="button" class="secondary" id="btnCsvStart">CSV Start</button>
+        <button type="button" class="secondary" id="btnCsvStop">CSV Stop</button>
+      </div>
+      <div class="row">
+        <button type="button" id="btnSave">NVS Save</button>
+        <button type="button" class="secondary" id="btnLoad">NVS Load</button>
+        <button type="button" class="secondary" id="btnReset">NVS Reset</button>
+      </div>
+      <p id="msg"></p>
+      <p id="csvStatus" style="color: var(--muted); font-size: 0.85rem;">CSV: idle</p>
+    </section>
+
+    <section>
+      <h2>RC Channels (PWM)</h2>
+      <table>
+        <thead><tr><th>CH</th><th>1-4</th><th>5-8</th></tr></thead>
+        <tbody>
+          <tr><td>1-4</td><td id="rc14">--</td><td id="rc58">--</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Set Parameter</h2>
+      <div class="row">
+        <input id="paramName" list="paramNames" placeholder="ROLL_P" maxlength="16">
+        <datalist id="paramNames"></datalist>
+        <input id="paramValue" type="number" step="any" placeholder="value">
+        <button type="button" id="btnParamSet">PARAM_SET</button>
+      </div>
+    </section>
+
+    <section class="full">
+      <h2>Parameters</h2>
+      <table>
+        <thead>
+          <tr><th>Name</th><th>Value</th><th>Index</th><th></th></tr>
+        </thead>
+        <tbody id="paramTableBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const fmt = (v, digits = 2) =>
+      (v === null || v === undefined || Number.isNaN(v)) ? "--" : Number(v).toFixed(digits);
+
+    function setMsg(text) {
+      $("msg").textContent = text || "";
+    }
+
+    async function postJson(url, body) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body ?? {}),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || res.statusText);
+      }
+      return res.json();
+    }
+
+    function renderParams(parameters) {
+      const body = $("paramTableBody");
+      const names = Object.keys(parameters || {}).sort();
+      const list = $("paramNames");
+      list.innerHTML = names.map((n) => `<option value="${n}"></option>`).join("");
+      body.innerHTML = names.map((name) => {
+        const p = parameters[name];
+        return `<tr>
+          <td>${name}</td>
+          <td>${fmt(p.value, 4)}</td>
+          <td>${p.index}/${p.count}</td>
+          <td><button type="button" data-param="${name}" data-value="${p.value}" class="secondary use-param">Use</button></td>
+        </tr>`;
+      }).join("");
+      body.querySelectorAll(".use-param").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          $("paramName").value = btn.dataset.param;
+          $("paramValue").value = btn.dataset.value;
+        });
+      });
+    }
+
+    function renderTelemetry(data) {
+      const connected = !!data.connected;
+      $("connDot").classList.toggle("ok", connected);
+      const addr = data.vehicle_addr
+        ? `${data.vehicle_addr.host}:${data.vehicle_addr.port}`
+        : "unknown";
+      $("subtitle").textContent = connected
+        ? `MAVLink linked — vehicle ${addr}`
+        : `Waiting for MAVLink on UDP (age=${fmt(data.age_s, 1)}s)`;
+
+      const hb = data.heartbeat || {};
+      const att = data.attitude || {};
+      const press = data.pressure || {};
+      const rc = (data.rc_channels && data.rc_channels.channels) || [];
+
+      $("flightState").textContent = hb.flight_state_label || "--";
+      $("roll").textContent = fmt(att.roll_deg);
+      $("pitch").textContent = fmt(att.pitch_deg);
+      $("yaw").textContent = fmt(att.yaw_deg);
+      $("pressure").textContent = fmt(press.press_abs_hpa);
+      $("alt").textContent = fmt(press.relative_altitude_m);
+      $("rc14").textContent = rc.slice(0, 4).join(", ") || "--";
+      $("rc58").textContent = rc.slice(4, 8).join(", ") || "--";
+      renderParams(data.parameters || {});
+    }
+
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onmessage = (ev) => {
+      try { renderTelemetry(JSON.parse(ev.data)); }
+      catch (e) { console.error(e); }
+    };
+    ws.onclose = () => {
+      $("connDot").classList.remove("ok");
+      $("subtitle").textContent = "WebSocket disconnected — reload the page";
+    };
+
+    $("btnVehicle").onclick = async () => {
+      try {
+        await postJson("/api/vehicle", {
+          host: $("vehicleHost").value,
+          port: Number($("vehiclePort").value),
+        });
+        setMsg("Vehicle target updated");
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    $("btnParamList").onclick = async () => {
+      try {
+        await postJson("/api/parameters/list");
+        setMsg("PARAM_REQUEST_LIST sent");
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    $("btnParamSet").onclick = async () => {
+      try {
+        await postJson("/api/parameters/set", {
+          name: $("paramName").value,
+          value: Number($("paramValue").value),
+        });
+        setMsg(`PARAM_SET ${$("paramName").value}`);
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    async function storage(action, label) {
+      try {
+        await postJson("/api/storage", { action });
+        setMsg(`${label} sent`);
+      } catch (e) { setMsg(String(e.message || e)); }
+    }
+    $("btnSave").onclick = () => storage(1, "NVS save");
+    $("btnLoad").onclick = () => storage(0, "NVS load");
+    $("btnReset").onclick = () => storage(2, "NVS reset");
+
+    $("btnCsvStart").onclick = async () => {
+      try {
+        const r = await postJson("/api/csv/start");
+        $("csvStatus").textContent = `CSV: ${r.path}`;
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+    $("btnCsvStop").onclick = async () => {
+      try {
+        await postJson("/api/csv/stop");
+        $("csvStatus").textContent = "CSV: idle";
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    fetch("/api/telemetry").then((r) => r.json()).then(renderTelemetry).catch(() => {});
+  </script>
+</body>
+</html>

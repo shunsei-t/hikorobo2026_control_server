@@ -1,0 +1,6 @@
+INFO:     Started server process [12188]
+INFO:     Waiting for application startup.
+2026-07-14 13:17:27,686 INFO [hikorobo2026_control_server.mavlink_bridge] MAVLink UDP listening on 0.0.0.0:5000
+2026-07-14 13:17:27,686 INFO [hikorobo2026_control_server.api] HTTP UI on http://0.0.0.0:3000
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:3000 (Press CTRL+C to quit)
