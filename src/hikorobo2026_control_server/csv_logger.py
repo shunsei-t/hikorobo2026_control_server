@@ -43,14 +43,14 @@ class CsvTelemetryLogger:
             "temperature_c",
             "relative_altitude_m",
             "vertical_speed_m_s",
-            "rc_1",
-            "rc_2",
-            "rc_3",
-            "rc_4",
-            "rc_5",
-            "rc_6",
-            "rc_7",
-            "rc_8",
+            *[f"rc_{i}" for i in range(1, 19)],
+            "target_roll_deg",
+            "target_pitch_deg",
+            "target_thr_pwm",
+            "auto_mode",
+            "auto_phase",
+            "yaw_prog_deg",
+            "pres_tgt_hpa",
         ]
         self._writer = csv.DictWriter(self._fp, fieldnames=fieldnames)
         self._writer.writeheader()
@@ -73,6 +73,27 @@ class CsvTelemetryLogger:
         pressure = telemetry.get("pressure") or {}
         rc = telemetry.get("rc_channels") or {}
         channels = rc.get("channels") or []
+        att_tgt = telemetry.get("attitude_target") or {}
+        auto = telemetry.get("auto_control") or {}
+        named = telemetry.get("named_floats") or {}
+
+        is_auto = heartbeat.get("flight_state") == 2
+        tgt_roll = att_tgt.get("roll_deg", "") if is_auto and att_tgt.get("active") else ""
+        tgt_pitch = att_tgt.get("pitch_deg", "") if is_auto and att_tgt.get("active") else ""
+        tgt_thr = att_tgt.get("target_thr_pwm", "") if is_auto and att_tgt.get("active") else ""
+
+        auto_mode = auto.get("auto_mode", "") if is_auto else ""
+        auto_phase = auto.get("auto_phase", "") if is_auto else ""
+        yaw_prog = (
+            auto.get("yaw_prog_deg")
+            if is_auto and auto.get("yaw_prog_deg") is not None
+            else named.get("YAW_PROG", "")
+        )
+        pres_tgt = (
+            auto.get("pres_tgt_hpa")
+            if is_auto and auto.get("pres_tgt_hpa") is not None
+            else named.get("PRES_TGT", "")
+        )
 
         row = {
             "timestamp_iso": datetime.now(timezone.utc).isoformat(),
@@ -88,14 +109,17 @@ class CsvTelemetryLogger:
             "temperature_c": pressure.get("temperature_c", ""),
             "relative_altitude_m": pressure.get("relative_altitude_m", ""),
             "vertical_speed_m_s": pressure.get("vertical_speed_m_s", ""),
-            "rc_1": channels[0] if len(channels) > 0 else "",
-            "rc_2": channels[1] if len(channels) > 1 else "",
-            "rc_3": channels[2] if len(channels) > 2 else "",
-            "rc_4": channels[3] if len(channels) > 3 else "",
-            "rc_5": channels[4] if len(channels) > 4 else "",
-            "rc_6": channels[5] if len(channels) > 5 else "",
-            "rc_7": channels[6] if len(channels) > 6 else "",
-            "rc_8": channels[7] if len(channels) > 7 else "",
+            **{
+                f"rc_{i}": channels[i - 1] if len(channels) >= i else ""
+                for i in range(1, 19)
+            },
+            "target_roll_deg": tgt_roll,
+            "target_pitch_deg": tgt_pitch,
+            "target_thr_pwm": tgt_thr,
+            "auto_mode": auto_mode,
+            "auto_phase": auto_phase,
+            "yaw_prog_deg": yaw_prog if is_auto else "",
+            "pres_tgt_hpa": pres_tgt if is_auto else "",
         }
         self._writer.writerow(row)
         self._fp.flush()

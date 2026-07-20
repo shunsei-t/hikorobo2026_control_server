@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -10,11 +11,13 @@ from pymavlink.dialects.v20 import common as mavlink2
 from hikorobo2026_control_server.config import Settings
 from hikorobo2026_control_server.state import (
     AttitudeSnapshot,
+    AttitudeTargetSnapshot,
     HeartbeatSnapshot,
     ParameterValue,
     PressureSnapshot,
     RcChannelsSnapshot,
     SharedState,
+    quat_to_euler_rad,
 )
 
 logger = logging.getLogger(__name__)
@@ -195,6 +198,21 @@ class MavlinkBridge:
                     pitchspeed=float(msg.pitchspeed),
                     yawspeed=float(msg.yawspeed),
                 )
+            elif msg_type == "ATTITUDE_TARGET":
+                q = [
+                    float(msg.q[0]),
+                    float(msg.q[1]),
+                    float(msg.q[2]),
+                    float(msg.q[3]),
+                ]
+                roll_rad, pitch_rad, _ = quat_to_euler_rad(q)
+                state.attitude_target = AttitudeTargetSnapshot(
+                    time_boot_ms=int(msg.time_boot_ms),
+                    roll_rad=roll_rad,
+                    pitch_rad=pitch_rad,
+                    thrust=float(msg.thrust),
+                    received_mono=time.monotonic(),
+                )
             elif msg_type == "RC_CHANNELS":
                 channels = [
                     int(getattr(msg, f"chan{i}_raw")) for i in range(1, 19)
@@ -219,6 +237,18 @@ class MavlinkBridge:
             elif msg_type == "NAMED_VALUE_FLOAT":
                 name = _decode_mav_string(msg.name)
                 state.named_floats[name] = float(msg.value)
+                if name == "AUTO_MODE":
+                    state.auto_control.auto_mode = int(float(msg.value))
+                    state.auto_control.diagnostics_mono = time.monotonic()
+                elif name == "AUTO_PHASE":
+                    state.auto_control.auto_phase = int(float(msg.value))
+                    state.auto_control.diagnostics_mono = time.monotonic()
+                elif name == "YAW_PROG":
+                    state.auto_control.yaw_prog_deg = float(msg.value)
+                    state.auto_control.diagnostics_mono = time.monotonic()
+                elif name == "PRES_TGT":
+                    state.auto_control.pres_tgt_hpa = float(msg.value)
+                    state.auto_control.diagnostics_mono = time.monotonic()
                 if state.pressure is None:
                     state.pressure = PressureSnapshot()
                 if name in {"ALTITUDE", "ALTITUD", "REL_ALT"}:

@@ -52,19 +52,52 @@
     }
     .status-dot.ok { background: var(--accent); box-shadow: 0 0 10px rgba(87,196,138,0.7); }
     main {
-      display: grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
       padding: 1rem 1.5rem 1.5rem;
     }
-    @media (max-width: 960px) {
-      main { grid-template-columns: 1fr; }
-    }
     section {
-      background: color-mix(in srgb, var(--panel) 88%, black);
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 1rem;
+      background: color-mix(in srgb, var(--panel) 88%, black);
+    }
+    section.tone-flight {
+      background:
+        linear-gradient(135deg, rgba(40, 110, 88, 0.35), transparent 55%),
+        color-mix(in srgb, #1a3d32 92%, black);
+      border-color: rgba(87, 196, 138, 0.22);
+    }
+    section.tone-auto {
+      background:
+        linear-gradient(135deg, rgba(45, 90, 120, 0.32), transparent 55%),
+        color-mix(in srgb, #1a3040 92%, black);
+      border-color: rgba(110, 170, 210, 0.22);
+    }
+    section.tone-conn {
+      background:
+        linear-gradient(135deg, rgba(140, 100, 50, 0.28), transparent 55%),
+        color-mix(in srgb, #3a3020 90%, black);
+      border-color: rgba(224, 164, 92, 0.25);
+    }
+    section.tone-rc {
+      background:
+        linear-gradient(135deg, rgba(50, 100, 100, 0.3), transparent 55%),
+        color-mix(in srgb, #1a3538 92%, black);
+      border-color: rgba(100, 190, 180, 0.22);
+    }
+    section.tone-quick {
+      background:
+        linear-gradient(135deg, rgba(90, 80, 40, 0.28), transparent 55%),
+        color-mix(in srgb, #32301a 90%, black);
+      border-color: rgba(200, 180, 90, 0.22);
+    }
+    section.tone-param {
+      background:
+        linear-gradient(135deg, rgba(70, 70, 90, 0.3), transparent 55%),
+        color-mix(in srgb, #262636 92%, black);
+      border-color: rgba(160, 160, 190, 0.2);
     }
     section h2 {
       margin: 0 0 0.75rem;
@@ -73,22 +106,67 @@
       letter-spacing: 0.08em;
       color: var(--muted);
     }
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    @media (max-width: 900px) {
+      .metric-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
     .grid-metrics {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 0.75rem;
     }
     .metric {
-      padding: 0.75rem;
+      padding: 0.65rem 0.5rem;
       border: 1px solid var(--line);
       border-radius: 10px;
-      background: rgba(0,0,0,0.15);
+      background: rgba(0,0,0,0.18);
+      text-align: center;
+      min-width: 0;
     }
-    .metric .label { color: var(--muted); font-size: 0.75rem; }
+    .metric .label { color: var(--muted); font-size: 0.72rem; }
     .metric .value {
-      margin-top: 0.25rem;
+      margin-top: 0.2rem;
       font-family: var(--mono);
-      font-size: 1.2rem;
+      font-size: 1.1rem;
+    }
+    .conn-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem 0.75rem;
+    }
+    .conn-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.18);
+    }
+    .conn-group .conn-label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      margin-right: 0.15rem;
+    }
+    .conn-status {
+      flex: 1 1 12rem;
+      min-width: 0;
+    }
+    .conn-status p {
+      margin: 0.15rem 0 0;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
     }
     table {
       width: 100%;
@@ -102,12 +180,6 @@
       border-bottom: 1px solid var(--line);
     }
     th { color: var(--muted); font-weight: 500; }
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
-    }
     input, button, select {
       font: inherit;
       border-radius: 8px;
@@ -131,8 +203,122 @@
       color: var(--warn);
       font-size: 0.85rem;
     }
+    .metric .value.stale { color: var(--warn); opacity: 0.85; }
+    .metric .value.inactive { color: var(--muted); }
+    .auto-compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+    @media (max-width: 720px) {
+      .auto-compare { grid-template-columns: 1fr; }
+    }
+    .auto-compare h3 {
+      margin: 0 0 0.5rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+    }
     #paramTableBody tr td:last-child { white-space: nowrap; }
     .full { grid-column: 1 / -1; }
+    .rc-row {
+      display: grid;
+      grid-template-columns: repeat(8, minmax(0, 1fr));
+      gap: 0.5rem;
+    }
+    @media (max-width: 900px) {
+      .rc-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    .rc-ch {
+      padding: 0.55rem 0.4rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.15);
+      text-align: center;
+      min-width: 0;
+    }
+    .rc-ch .rc-name {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+    }
+    .rc-ch .rc-pwm {
+      margin-top: 0.2rem;
+      font-family: var(--mono);
+      font-size: 1rem;
+    }
+    .param-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+      gap: 0.55rem;
+    }
+    .param-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      padding: 0.55rem;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.15);
+    }
+    .param-field label {
+      color: var(--muted);
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      font-family: var(--mono);
+    }
+    .param-field .param-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.35rem;
+    }
+    .param-field .param-cur {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+    .param-field .param-cur.empty {
+      color: var(--muted);
+      opacity: 0.7;
+    }
+    .param-field .param-controls {
+      display: flex;
+      gap: 0.35rem;
+      align-items: center;
+    }
+    .param-field input {
+      min-width: 0;
+      flex: 1;
+      width: 100%;
+      font-family: var(--mono);
+      padding: 0.35rem 0.45rem;
+    }
+    .param-field button {
+      padding: 0.35rem 0.5rem;
+      flex-shrink: 0;
+    }
+    .param-field.dirty {
+      border-color: color-mix(in srgb, var(--warn) 55%, var(--line));
+    }
+    section h3.param-group-title {
+      margin: 0 0 0.55rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .param-panel-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.65rem;
+    }
   </style>
 </head>
 <body>
@@ -142,9 +328,9 @@
   </header>
 
   <main>
-    <section>
+    <section class="tone-flight">
       <h2>Flight / Attitude</h2>
-      <div class="grid-metrics">
+      <div class="metric-row">
         <div class="metric"><div class="label">State</div><div class="value" id="flightState">--</div></div>
         <div class="metric"><div class="label">Roll [deg]</div><div class="value" id="roll">--</div></div>
         <div class="metric"><div class="label">Pitch [deg]</div><div class="value" id="pitch">--</div></div>
@@ -154,40 +340,94 @@
       </div>
     </section>
 
-    <section>
+    <section class="tone-auto">
+      <h2>Auto Control</h2>
+      <div class="metric-row" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+        <div class="metric"><div class="label">Submode</div><div class="value" id="autoMode">--</div></div>
+        <div class="metric"><div class="label">Phase</div><div class="value" id="autoPhase">--</div></div>
+        <div class="metric"><div class="label">YAW progress [deg]</div><div class="value" id="yawProg">--</div></div>
+        <div class="metric"><div class="label">Target age [s]</div><div class="value" id="tgtAge">--</div></div>
+      </div>
+      <div class="auto-compare">
+        <div>
+          <h3>Attitude (current → target)</h3>
+          <div class="grid-metrics">
+            <div class="metric"><div class="label">Roll [deg]</div><div class="value"><span id="rollCur">--</span> → <span id="rollTgt">--</span></div></div>
+            <div class="metric"><div class="label">Pitch [deg]</div><div class="value"><span id="pitchCur">--</span> → <span id="pitchTgt">--</span></div></div>
+            <div class="metric"><div class="label">Throttle [PWM]</div><div class="value"><span id="thrCur">--</span> → <span id="thrTgt">--</span></div></div>
+          </div>
+        </div>
+        <div>
+          <h3>Pressure [hPa]</h3>
+          <div class="grid-metrics">
+            <div class="metric"><div class="label">Current</div><div class="value" id="presCur">--</div></div>
+            <div class="metric"><div class="label">Target</div><div class="value" id="presTgt">--</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tone-conn">
       <h2>Connection</h2>
-      <div class="row">
-        <input id="vehicleHost" placeholder="vehicle host" value="192.168.0.15">
-        <input id="vehiclePort" type="number" value="1234" min="1" max="65535">
-        <button type="button" id="btnVehicle">Set target</button>
+      <div class="conn-row">
+        <div class="conn-group">
+          <span class="conn-label">Vehicle</span>
+          <input id="vehicleHost" placeholder="host" value="192.168.0.15">
+          <input id="vehiclePort" type="number" value="1234" min="1" max="65535" style="min-width:5.5rem;">
+          <button type="button" id="btnVehicle">Set</button>
+        </div>
+        <div class="conn-group">
+          <span class="conn-label">Params</span>
+          <button type="button" id="btnParamList">PARAM list</button>
+        </div>
+        <div class="conn-group">
+          <span class="conn-label">CSV</span>
+          <button type="button" class="secondary" id="btnCsvStart">Start</button>
+          <button type="button" class="secondary" id="btnCsvStop">Stop</button>
+        </div>
+        <div class="conn-group">
+          <span class="conn-label">NVS</span>
+          <button type="button" id="btnSave">Save</button>
+          <button type="button" class="secondary" id="btnLoad">Load</button>
+          <button type="button" class="secondary" id="btnReset">Reset</button>
+        </div>
+        <div class="conn-status">
+          <p id="msg"></p>
+          <p id="csvStatus" style="color: var(--muted); font-size: 0.85rem;">CSV: idle</p>
+        </div>
       </div>
-      <div class="row">
-        <button type="button" id="btnParamList">Request PARAM list</button>
-        <button type="button" class="secondary" id="btnCsvStart">CSV Start</button>
-        <button type="button" class="secondary" id="btnCsvStop">CSV Stop</button>
-      </div>
-      <div class="row">
-        <button type="button" id="btnSave">NVS Save</button>
-        <button type="button" class="secondary" id="btnLoad">NVS Load</button>
-        <button type="button" class="secondary" id="btnReset">NVS Reset</button>
-      </div>
-      <p id="msg"></p>
-      <p id="csvStatus" style="color: var(--muted); font-size: 0.85rem;">CSV: idle</p>
     </section>
 
-    <section>
+    <section class="tone-rc">
       <h2>RC Channels (PWM)</h2>
-      <table>
-        <thead><tr><th>CH</th><th>1-4</th><th>5-8</th></tr></thead>
-        <tbody>
-          <tr><td>1-4</td><td id="rc14">--</td><td id="rc58">--</td></tr>
-        </tbody>
-      </table>
+      <div class="rc-row" id="rcRow"></div>
     </section>
 
-    <section>
+    <section class="tone-quick">
+      <h2>Quick Params</h2>
+      <h3 class="param-group-title">PID</h3>
+      <div class="param-grid" id="pidParamGrid"></div>
+      <div class="param-panel-actions">
+        <button type="button" id="btnPidSetAll">Set all PID</button>
+      </div>
+
+      <h3 class="param-group-title" style="margin-top:1rem;">RC_TRIM (PWM µs)</h3>
+      <div class="param-grid" id="trimParamGrid"></div>
+      <div class="param-panel-actions">
+        <button type="button" id="btnTrimFromRc">Copy from RC 1–6</button>
+        <button type="button" id="btnTrimSetAll">Set all RC_TRIM</button>
+      </div>
+
+      <h3 class="param-group-title" style="margin-top:1rem;">AUTO</h3>
+      <div class="param-grid" id="autoParamGrid"></div>
+      <div class="param-panel-actions">
+        <button type="button" id="btnAutoSetAll">Set all AUTO</button>
+      </div>
+    </section>
+
+    <section class="tone-param">
       <h2>Set Parameter</h2>
-      <div class="row">
+      <div class="row" style="margin-bottom:0;">
         <input id="paramName" list="paramNames" placeholder="ROLL_P" maxlength="16">
         <datalist id="paramNames"></datalist>
         <input id="paramValue" type="number" step="any" placeholder="value">
@@ -195,7 +435,7 @@
       </div>
     </section>
 
-    <section class="full">
+    <section class="tone-param">
       <h2>Parameters</h2>
       <table>
         <thead>
@@ -210,6 +450,144 @@
     const $ = (id) => document.getElementById(id);
     const fmt = (v, digits = 2) =>
       (v === null || v === undefined || Number.isNaN(v)) ? "--" : Number(v).toFixed(digits);
+
+    const RC_CHANNEL_NAMES = [
+      "AIL_L", "ELE", "THR", "RUD", "GER", "AIL_R", "SA", "SE",
+    ];
+
+    const PID_PARAMS = [
+      "ROLL_P", "ROLL_I", "ROLL_D",
+      "PITCH_P", "PITCH_I", "PITCH_D",
+      "YAW_P", "YAW_I", "YAW_D",
+    ];
+    const TRIM_PARAMS = [
+      "RC_TRIM_AILL", "RC_TRIM_AILR", "RC_TRIM_ELE",
+      "RC_TRIM_RUD", "RC_TRIM_THR", "RC_TRIM_GEA",
+    ];
+    // CH1..6 → trim param (AIL_L, ELE, THR, RUD, GER, AIL_R)
+    const TRIM_FROM_RC = [
+      ["RC_TRIM_AILL", 0],
+      ["RC_TRIM_ELE", 1],
+      ["RC_TRIM_THR", 2],
+      ["RC_TRIM_RUD", 3],
+      ["RC_TRIM_GEA", 4],
+      ["RC_TRIM_AILR", 5],
+    ];
+    const AUTO_PARAMS = [
+      "AUTO_ROLL", "AUTO_THR", "AUTO_THR_LIM",
+      "AUTO_PITCH_LIM", "AUTO_PRES_P", "AUTO_PRES_TOL",
+    ];
+
+    let latestRcChannels = [];
+    let quickParamsBuilt = false;
+
+    function fieldId(name) {
+      return `qp_${name}`;
+    }
+
+    function curId(name) {
+      return `qp_cur_${name}`;
+    }
+
+    function buildQuickParamField(name) {
+      return `<div class="param-field" data-param-wrap="${name}">
+        <div class="param-head">
+          <label for="${fieldId(name)}">${name}</label>
+          <span class="param-cur empty" id="${curId(name)}">--</span>
+        </div>
+        <div class="param-controls">
+          <input id="${fieldId(name)}" type="number" step="any" data-param-field="${name}">
+          <button type="button" class="secondary qp-set" data-param="${name}">Set</button>
+        </div>
+      </div>`;
+    }
+
+    function buildQuickParamGrids() {
+      if (quickParamsBuilt) return;
+      $("pidParamGrid").innerHTML = PID_PARAMS.map(buildQuickParamField).join("");
+      $("trimParamGrid").innerHTML = TRIM_PARAMS.map(buildQuickParamField).join("");
+      $("autoParamGrid").innerHTML = AUTO_PARAMS.map(buildQuickParamField).join("");
+      document.querySelectorAll(".qp-set").forEach((btn) => {
+        btn.addEventListener("click", () => setQuickParam(btn.dataset.param));
+      });
+      document.querySelectorAll("[data-param-field]").forEach((input) => {
+        input.addEventListener("input", () => {
+          input.dataset.dirty = "1";
+          input.closest(".param-field")?.classList.add("dirty");
+        });
+      });
+      quickParamsBuilt = true;
+    }
+
+    function formatParamCur(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return "--";
+      if (Number.isInteger(n)) return String(n);
+      const s = n.toFixed(4);
+      return s.replace(/\.?0+$/, "") || "0";
+    }
+
+    function syncQuickParams(parameters) {
+      buildQuickParamGrids();
+      const all = [...PID_PARAMS, ...TRIM_PARAMS, ...AUTO_PARAMS];
+      for (const name of all) {
+        const input = $(fieldId(name));
+        const cur = $(curId(name));
+        const p = parameters[name];
+        if (cur) {
+          if (p) {
+            cur.textContent = formatParamCur(p.value);
+            cur.classList.remove("empty");
+          } else {
+            cur.textContent = "--";
+            cur.classList.add("empty");
+          }
+        }
+        if (!input) continue;
+        if (input === document.activeElement || input.dataset.dirty === "1") {
+          continue;
+        }
+        if (!p) continue;
+        input.value = String(p.value);
+      }
+    }
+
+    async function setQuickParam(name) {
+      const input = $(fieldId(name));
+      if (!input) return;
+      const value = Number(input.value);
+      if (Number.isNaN(value)) {
+        setMsg(`${name}: invalid value`);
+        return;
+      }
+      try {
+        await postJson("/api/parameters/set", { name, value });
+        input.dataset.dirty = "0";
+        input.closest(".param-field")?.classList.remove("dirty");
+        setMsg(`PARAM_SET ${name}=${value}`);
+      } catch (e) {
+        setMsg(String(e.message || e));
+      }
+    }
+
+    async function setQuickParamGroup(names) {
+      for (const name of names) {
+        await setQuickParam(name);
+      }
+    }
+
+    function renderRcChannels(channels) {
+      latestRcChannels = channels || [];
+      const row = $("rcRow");
+      row.innerHTML = RC_CHANNEL_NAMES.map((name, i) => {
+        const raw = channels[i];
+        const pwm = (raw === undefined || raw === null) ? "--" : String(raw);
+        return `<div class="rc-ch">
+          <div class="rc-name">${i + 1} ${name}</div>
+          <div class="rc-pwm">${pwm}</div>
+        </div>`;
+      }).join("");
+    }
 
     function setMsg(text) {
       $("msg").textContent = text || "";
@@ -264,6 +642,9 @@
       const att = data.attitude || {};
       const press = data.pressure || {};
       const rc = (data.rc_channels && data.rc_channels.channels) || [];
+      const auto = data.auto_control || {};
+      const tgt = data.attitude_target || {};
+      const isAuto = hb.flight_state === 2;
 
       $("flightState").textContent = hb.flight_state_label || "--";
       $("roll").textContent = fmt(att.roll_deg);
@@ -271,9 +652,34 @@
       $("yaw").textContent = fmt(att.yaw_deg);
       $("pressure").textContent = fmt(press.press_abs_hpa);
       $("alt").textContent = fmt(press.relative_altitude_m);
-      $("rc14").textContent = rc.slice(0, 4).join(", ") || "--";
-      $("rc58").textContent = rc.slice(4, 8).join(", ") || "--";
+
+      const tgtInactive = !isAuto || !tgt.active;
+      const setTgt = (el, val, stale) => {
+        const node = $(el);
+        node.textContent = tgtInactive ? (isAuto ? "stale" : "inactive") : fmt(val);
+        node.classList.toggle("stale", isAuto && !!tgt.stale);
+        node.classList.toggle("inactive", !isAuto);
+      };
+
+      $("autoMode").textContent = isAuto ? (auto.auto_mode_label || "--") : "inactive";
+      $("autoPhase").textContent = isAuto ? (auto.auto_phase_label || "--") : "—";
+      $("yawProg").textContent = isAuto && auto.yaw_prog_deg != null ? fmt(auto.yaw_prog_deg, 1) : "--";
+      $("tgtAge").textContent = tgt.age_s != null ? fmt(tgt.age_s, 2) : "--";
+
+      $("rollCur").textContent = fmt(att.roll_deg);
+      $("pitchCur").textContent = fmt(att.pitch_deg);
+      $("thrCur").textContent = data.rc_thr_pwm != null ? String(Math.round(data.rc_thr_pwm)) : "--";
+      setTgt("rollTgt", tgt.roll_deg, tgt.stale);
+      setTgt("pitchTgt", tgt.pitch_deg, tgt.stale);
+      setTgt("thrTgt", tgt.target_thr_pwm, tgt.stale);
+
+      $("presCur").textContent = fmt(press.press_abs_hpa);
+      $("presTgt").textContent = isAuto && auto.pres_tgt_hpa != null ? fmt(auto.pres_tgt_hpa) : "--";
+
+      renderRcChannels(rc);
+
       renderParams(data.parameters || {});
+      syncQuickParams(data.parameters || {});
     }
 
     const proto = location.protocol === "https:" ? "wss" : "ws";
@@ -313,6 +719,28 @@
         setMsg(`PARAM_SET ${$("paramName").value}`);
       } catch (e) { setMsg(String(e.message || e)); }
     };
+
+    $("btnPidSetAll").onclick = () => setQuickParamGroup(PID_PARAMS);
+    $("btnTrimSetAll").onclick = () => setQuickParamGroup(TRIM_PARAMS);
+    $("btnAutoSetAll").onclick = () => setQuickParamGroup(AUTO_PARAMS);
+    $("btnTrimFromRc").onclick = () => {
+      let copied = 0;
+      for (const [name, idx] of TRIM_FROM_RC) {
+        const raw = latestRcChannels[idx];
+        if (raw === undefined || raw === null) continue;
+        const input = $(fieldId(name));
+        if (!input) continue;
+        input.value = String(raw);
+        input.dataset.dirty = "1";
+        input.closest(".param-field")?.classList.add("dirty");
+        copied += 1;
+      }
+      setMsg(copied > 0
+        ? `Copied ${copied} RC values into RC_TRIM fields (press Set)`
+        : "No RC values to copy");
+    };
+
+    buildQuickParamGrids();
 
     async function storage(action, label) {
       try {
