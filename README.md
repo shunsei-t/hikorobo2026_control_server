@@ -70,8 +70,33 @@ uv run python -m hikorobo2026_control_server
 | GET | `/api/parameters` | キャッシュ済みパラメータ |
 | POST | `/api/parameters/list` | 全パラメータ要求 |
 | POST | `/api/parameters/set` | `{"name":"ROLL_P","value":1.2}` |
+| GET | `/api/parameters/export` | キャッシュ済みパラメータを CSV ダウンロード |
+| GET | `/api/parameters/files` | `params/` 内の CSV 一覧 |
+| POST | `/api/parameters/files/save` | キャッシュを `params/*.csv` に保存 |
+| POST | `/api/parameters/files/load` | CSV を読み車両へ `PARAM_SET` |
+| POST | `/api/parameters/import` | CSV アップロード→車両へ適用 |
+| GET | `/api/parameters/files/download/{name}` | 保存済み CSV の取得 |
 | POST | `/api/storage` | `{"action":1}` NVS 保存 |
 | WS | `/ws` | テレメトリ配信 |
+
+## パラメータ CSV
+
+フォーマットは次の2列です。
+
+```csv
+name,value
+ROLL_P,1.0
+AUTO_PITCH,0.0
+```
+
+Web UI の Connection → **Param CSV** から操作できます。
+
+1. 先に `PARAM list` で機体から取得する  
+2. **Save to server** … `params/params_<時刻>.csv` に保存（または **Download**）  
+3. **Load→vehicle** / **Upload** … CSV の各行を `PARAM_SET` で機体へ書き戻す  
+4. 機体 NVS に残す場合は別途 NVS Save  
+
+保存先ディレクトリは `PARAM_STORE_DIR`（既定 `params/`）。
 
 ## 設定
 

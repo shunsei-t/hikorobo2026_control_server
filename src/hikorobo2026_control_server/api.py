@@ -2,19 +2,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from hikorobo2026_control_server.config import Settings, settings
 from hikorobo2026_control_server.csv_logger import CsvTelemetryLogger
 from hikorobo2026_control_server.mavlink_bridge import MavlinkBridge
+from hikorobo2026_control_server.param_store import ParameterFileStore
 from hikorobo2026_control_server.state import SharedState
 
 logger = logging.getLogger(__name__)
@@ -39,6 +42,30 @@ class StorageBody(BaseModel):
 class VehicleOverrideBody(BaseModel):
     host: str
     port: int = Field(ge=1, le=65535)
+
+
+class ParamFileSaveBody(BaseModel):
+    name: str | None = Field(
+        default=None,
+        description="Optional file name (without path). Default: params_<timestamp>.csv",
+        max_length=64,
+    )
+
+
+class ParamFileLoadBody(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    apply: bool = Field(
+        default=True,
+        description="If true, PARAM_SET each row to the vehicle",
+    )
+    delay_s: float = Field(default=0.03, ge=0.0, le=1.0)
+
+
+class ParamImportBody(BaseModel):
+    csv_text: str = Field(min_length=1)
+    apply: bool = True
+    delay_s: float = Field(default=0.03, ge=0.0, le=1.0)
+    archive_name: str | None = Field(default=None, max_length=64)
 
 
 class ConnectionManager:
@@ -68,6 +95,17 @@ class ConnectionManager:
             await self.disconnect(ws)
 
 
+def _datetime_stamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+
+
+def _safe_upload_name(name: str) -> str | None:
+    base = Path(name).name
+    if re.match(r"^[A-Za-z0-9._-]{1,64}$", base) and base.endswith(".csv"):
+        return base
+    return None
+
+
 def create_app(
     app_settings: Settings | None = None,
     shared: SharedState | None = None,
@@ -78,6 +116,7 @@ def create_app(
     mav = bridge or MavlinkBridge(cfg, state)
     ws_manager = ConnectionManager()
     csv_logger = CsvTelemetryLogger(cfg.csv_log_dir)
+    param_store = ParameterFileStore(cfg.param_store_dir)
     heartbeat_task: asyncio.Task | None = None
     last_csv_write_mono = 0.0
     last_ws_push_mono = 0.0
@@ -92,11 +131,24 @@ def create_app(
             last_ws_push_mono = now
             await ws_manager.broadcast(payload)
 
+    async def apply_param_rows(
+        rows: list[tuple[str, float]],
+        delay_s: float,
+    ) -> dict[str, Any]:
+        applied = 0
+        for name, value in rows:
+            mav.set_parameter(name, value)
+            applied += 1
+            if delay_s > 0.0:
+                await asyncio.sleep(delay_s)
+        return {"applied": applied, "count": len(rows)}
+
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         nonlocal heartbeat_task
         mav.add_listener(on_telemetry)
         await mav.start()
+        param_store.ensure_dir()
 
         async def gcs_heartbeat_loop() -> None:
             while True:
@@ -125,6 +177,7 @@ def create_app(
     app.state.shared = state
     app.state.bridge = mav
     app.state.csv_logger = csv_logger
+    app.state.param_store = param_store
 
     @app.get("/api/health")
     async def health() -> dict[str, Any]:
@@ -164,6 +217,118 @@ def create_app(
     async def set_param(body: ParamSetBody) -> dict[str, Any]:
         mav.set_parameter(body.name, body.value)
         return {"status": "sent", "name": body.name, "value": body.value}
+
+    @app.get("/api/parameters/export")
+    async def export_parameters() -> Response:
+        params = state.snapshot().to_public_dict()["parameters"]
+        if not params:
+            raise HTTPException(
+                status_code=400,
+                detail="no cached parameters; request PARAM list first",
+            )
+        text = param_store.export_text(params)
+        stamp = _datetime_stamp()
+        return Response(
+            content=text,
+            media_type="text/csv; charset=utf-8",
+            headers={
+                "Content-Disposition": f'attachment; filename="params_{stamp}.csv"'
+            },
+        )
+
+    @app.get("/api/parameters/files")
+    async def list_param_files() -> dict[str, Any]:
+        return {"files": param_store.list_files(), "dir": str(param_store.directory)}
+
+    @app.post("/api/parameters/files/save")
+    async def save_param_file(body: ParamFileSaveBody) -> dict[str, Any]:
+        params = state.snapshot().to_public_dict()["parameters"]
+        if not params:
+            raise HTTPException(
+                status_code=400,
+                detail="no cached parameters; request PARAM list first",
+            )
+        try:
+            path = param_store.save(params, body.name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return {
+            "status": "ok",
+            "path": str(path),
+            "name": path.name,
+            "count": len(params),
+        }
+
+    @app.post("/api/parameters/files/load")
+    async def load_param_file(body: ParamFileLoadBody) -> dict[str, Any]:
+        try:
+            rows = param_store.load(body.name)
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        result: dict[str, Any] = {
+            "status": "ok",
+            "name": body.name,
+            "count": len(rows),
+            "applied": 0,
+        }
+        if body.apply:
+            applied = await apply_param_rows(rows, body.delay_s)
+            result.update(applied)
+            result["status"] = "applied"
+        else:
+            result["parameters"] = [{"name": n, "value": v} for n, v in rows]
+        return result
+
+    @app.post("/api/parameters/import")
+    async def import_parameters(body: ParamImportBody) -> dict[str, Any]:
+        try:
+            rows = ParameterFileStore.parse_csv_text(body.csv_text)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not rows:
+            raise HTTPException(status_code=400, detail="no parameter rows in CSV")
+
+        saved_name = None
+        try:
+            stamp = _datetime_stamp()
+            archive_name = body.archive_name
+            if archive_name:
+                safe = _safe_upload_name(archive_name)
+                archive_name = safe or f"import_{stamp}.csv"
+            else:
+                archive_name = f"import_{stamp}.csv"
+            path = param_store.save(
+                {n: {"value": v} for n, v in rows},
+                archive_name,
+            )
+            saved_name = path.name
+        except Exception:
+            logger.exception("failed to archive imported CSV")
+
+        result: dict[str, Any] = {
+            "status": "ok",
+            "count": len(rows),
+            "saved_as": saved_name,
+            "applied": 0,
+        }
+        if body.apply:
+            applied = await apply_param_rows(rows, body.delay_s)
+            result.update(applied)
+            result["status"] = "applied"
+        return result
+
+    @app.get("/api/parameters/files/download/{name}")
+    async def download_param_file(name: str) -> FileResponse:
+        try:
+            path = param_store.resolve(name)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="file not found")
+        return FileResponse(path, media_type="text/csv", filename=path.name)
 
     @app.post("/api/storage")
     async def storage(body: StorageBody) -> dict[str, Any]:

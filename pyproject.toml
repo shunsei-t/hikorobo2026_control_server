@@ -11,6 +11,7 @@ dependencies = [
     "fastapi>=0.139.0",
     "pydantic-settings>=2.14.2",
     "pymavlink>=2.4.49",
+    "python-multipart>=0.0.20",
     "uvicorn[standard]>=0.51.0",
 ]
 

@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     http_port: int = 3000
 
     csv_log_dir: str = "logs"
+    param_store_dir: str = "params"
 
 
 settings = Settings()

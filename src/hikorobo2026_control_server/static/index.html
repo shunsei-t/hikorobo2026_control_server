@@ -391,9 +391,23 @@
           <button type="button" class="secondary" id="btnLoad">Load</button>
           <button type="button" class="secondary" id="btnReset">Reset</button>
         </div>
+        <div class="conn-group">
+          <span class="conn-label">Param CSV</span>
+          <button type="button" id="btnParamExport">Download</button>
+          <button type="button" class="secondary" id="btnParamSaveFile">Save to server</button>
+          <select id="paramFileSelect" style="min-width:10rem;">
+            <option value="">(select file)</option>
+          </select>
+          <button type="button" class="secondary" id="btnParamLoadFile">Load→vehicle</button>
+          <label class="secondary" style="cursor:pointer;padding:0.45rem 0.65rem;border:1px solid var(--line);border-radius:8px;">
+            Upload
+            <input id="paramFileUpload" type="file" accept=".csv,text/csv" hidden>
+          </label>
+        </div>
         <div class="conn-status">
           <p id="msg"></p>
           <p id="csvStatus" style="color: var(--muted); font-size: 0.85rem;">CSV: idle</p>
+          <p id="paramFileStatus" style="color: var(--muted); font-size: 0.85rem;">Param files: —</p>
         </div>
       </div>
     </section>
@@ -474,7 +488,7 @@
       ["RC_TRIM_AILR", 5],
     ];
     const AUTO_PARAMS = [
-      "AUTO_ROLL", "AUTO_THR", "AUTO_THR_LIM",
+      "AUTO_ROLL", "AUTO_PITCH", "AUTO_THR", "AUTO_THR_LIM",
       "AUTO_PITCH_LIM", "AUTO_PRES_P", "AUTO_PRES_TOL",
     ];
 
@@ -606,27 +620,60 @@
       return res.json();
     }
 
+    let lastParamsSignature = "";
+
+    function paramsSignature(parameters) {
+      const names = Object.keys(parameters || {}).sort();
+      return names.map((name) => {
+        const p = parameters[name] || {};
+        return `${name}:${p.value}:${p.index}:${p.count}`;
+      }).join("|");
+    }
+
     function renderParams(parameters) {
+      const sig = paramsSignature(parameters);
+      if (sig === lastParamsSignature) {
+        return;
+      }
+      lastParamsSignature = sig;
+
       const body = $("paramTableBody");
       const names = Object.keys(parameters || {}).sort();
       const list = $("paramNames");
       list.innerHTML = names.map((n) => `<option value="${n}"></option>`).join("");
       body.innerHTML = names.map((name) => {
         const p = parameters[name];
+        const valueStr = Number.isFinite(Number(p.value))
+          ? String(Number(p.value))
+          : "";
+        // Escape for attribute context
+        const esc = (s) => String(s)
+          .replace(/&/g, "&amp;")
+          .replace(/"/g, "&quot;")
+          .replace(/</g, "&lt;");
         return `<tr>
-          <td>${name}</td>
+          <td>${esc(name)}</td>
           <td>${fmt(p.value, 4)}</td>
           <td>${p.index}/${p.count}</td>
-          <td><button type="button" data-param="${name}" data-value="${p.value}" class="secondary use-param">Use</button></td>
+          <td><button type="button" class="secondary use-param"
+                data-param="${esc(name)}"
+                data-value="${esc(valueStr)}">Use</button></td>
         </tr>`;
       }).join("");
-      body.querySelectorAll(".use-param").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          $("paramName").value = btn.dataset.param;
-          $("paramValue").value = btn.dataset.value;
-        });
-      });
     }
+
+    // One-time handler: rebind is not needed when the table is rebuilt.
+    $("paramTableBody").addEventListener("click", (ev) => {
+      const btn = ev.target.closest("button.use-param");
+      if (!btn || !$("paramTableBody").contains(btn)) {
+        return;
+      }
+      const name = btn.getAttribute("data-param") || "";
+      const value = btn.getAttribute("data-value") || "";
+      $("paramName").value = name;
+      $("paramValue").value = value;
+      setMsg(name ? `Loaded ${name} = ${value}` : "");
+    });
 
     function renderTelemetry(data) {
       const connected = !!data.connected;
@@ -765,6 +812,91 @@
       } catch (e) { setMsg(String(e.message || e)); }
     };
 
+    async function refreshParamFiles(selectName) {
+      try {
+        const r = await fetch("/api/parameters/files").then((res) => res.json());
+        const sel = $("paramFileSelect");
+        const prev = selectName || sel.value;
+        sel.innerHTML = `<option value="">(select file)</option>` +
+          (r.files || []).map((f) =>
+            `<option value="${f.name}">${f.name}</option>`
+          ).join("");
+        if (prev) sel.value = prev;
+        $("paramFileStatus").textContent =
+          `Param files: ${(r.files || []).length} in ${r.dir || "params"}`;
+      } catch (e) {
+        $("paramFileStatus").textContent = "Param files: unavailable";
+      }
+    }
+
+    $("btnParamExport").onclick = async () => {
+      try {
+        const res = await fetch("/api/parameters/export");
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.detail || res.statusText || `HTTP ${res.status}`);
+        }
+        const blob = await res.blob();
+        const disp = res.headers.get("Content-Disposition") || "";
+        const match = /filename=\"?([^\";]+)\"?/.exec(disp);
+        const filename = match ? match[1] : "params.csv";
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        setMsg(`Downloaded ${filename}`);
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    $("btnParamSaveFile").onclick = async () => {
+      try {
+        const r = await postJson("/api/parameters/files/save", {});
+        setMsg(`Saved ${r.count} params → ${r.name}`);
+        await refreshParamFiles(r.name);
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    $("btnParamLoadFile").onclick = async () => {
+      const name = $("paramFileSelect").value;
+      if (!name) {
+        setMsg("Select a parameter CSV first");
+        return;
+      }
+      try {
+        const r = await postJson("/api/parameters/files/load", {
+          name,
+          apply: true,
+          delay_s: 0.03,
+        });
+        setMsg(`Loaded ${r.applied}/${r.count} params from ${name}`);
+        await postJson("/api/parameters/list");
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    $("paramFileUpload").onchange = async (ev) => {
+      const file = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (!file) return;
+      try {
+        const csv_text = await file.text();
+        const r = await postJson("/api/parameters/import", {
+          csv_text,
+          apply: true,
+          delay_s: 0.03,
+          archive_name: file.name,
+        });
+        setMsg(`Imported ${r.applied}/${r.count} params`
+          + (r.saved_as ? ` (saved as ${r.saved_as})` : ""));
+        await refreshParamFiles(r.saved_as);
+        await postJson("/api/parameters/list");
+      } catch (e) { setMsg(String(e.message || e)); }
+    };
+
+    refreshParamFiles();
     fetch("/api/telemetry").then((r) => r.json()).then(renderTelemetry).catch(() => {});
   </script>
 </body>
