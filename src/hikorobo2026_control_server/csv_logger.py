@@ -47,6 +47,7 @@ class CsvTelemetryLogger:
             "target_roll_deg",
             "target_pitch_deg",
             "target_thr_pwm",
+            "rud_tgt_deg",
             "auto_mode",
             "auto_phase",
             "yaw_prog_deg",
@@ -94,6 +95,11 @@ class CsvTelemetryLogger:
             if is_auto and auto.get("pres_tgt_hpa") is not None
             else named.get("PRES_TGT", "")
         )
+        rud_tgt = (
+            auto.get("rud_tgt_deg")
+            if is_auto and auto.get("rud_tgt_deg") is not None
+            else named.get("RUD_TGT", "")
+        )
 
         row = {
             "timestamp_iso": datetime.now(timezone.utc).isoformat(),
@@ -116,6 +122,7 @@ class CsvTelemetryLogger:
             "target_roll_deg": tgt_roll,
             "target_pitch_deg": tgt_pitch,
             "target_thr_pwm": tgt_thr,
+            "rud_tgt_deg": rud_tgt if is_auto else "",
             "auto_mode": auto_mode,
             "auto_phase": auto_phase,
             "yaw_prog_deg": yaw_prog if is_auto else "",

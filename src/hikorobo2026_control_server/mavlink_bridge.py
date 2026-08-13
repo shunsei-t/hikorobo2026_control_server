@@ -249,6 +249,9 @@ class MavlinkBridge:
                 elif name == "PRES_TGT":
                     state.auto_control.pres_tgt_hpa = float(msg.value)
                     state.auto_control.diagnostics_mono = time.monotonic()
+                elif name == "RUD_TGT":
+                    state.auto_control.rud_tgt_deg = float(msg.value)
+                    state.auto_control.diagnostics_mono = time.monotonic()
                 if state.pressure is None:
                     state.pressure = PressureSnapshot()
                 if name in {"ALTITUDE", "ALTITUD", "REL_ALT"}:

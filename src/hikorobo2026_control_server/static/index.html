@@ -354,6 +354,7 @@
           <div class="grid-metrics">
             <div class="metric"><div class="label">Roll [deg]</div><div class="value"><span id="rollCur">--</span> → <span id="rollTgt">--</span></div></div>
             <div class="metric"><div class="label">Pitch [deg]</div><div class="value"><span id="pitchCur">--</span> → <span id="pitchTgt">--</span></div></div>
+            <div class="metric"><div class="label">Rudder [deg]</div><div class="value" id="rudTgt">--</div></div>
             <div class="metric"><div class="label">Throttle [PWM]</div><div class="value"><span id="thrCur">--</span> → <span id="thrTgt">--</span></div></div>
           </div>
         </div>
@@ -437,6 +438,12 @@
       <div class="param-panel-actions">
         <button type="button" id="btnAutoSetAll">Set all AUTO</button>
       </div>
+
+      <h3 class="param-group-title" style="margin-top:1rem;">SEMI_AUTO</h3>
+      <div class="param-grid" id="sautoParamGrid"></div>
+      <div class="param-panel-actions">
+        <button type="button" id="btnSautoSetAll">Set all SEMI_AUTO</button>
+      </div>
     </section>
 
     <section class="tone-param">
@@ -488,8 +495,11 @@
       ["RC_TRIM_AILR", 5],
     ];
     const AUTO_PARAMS = [
-      "AUTO_ROLL", "AUTO_PITCH", "AUTO_THR", "AUTO_THR_LIM",
+      "AUTO_ROLL", "AUTO_PITCH", "AUTO_RUD", "AUTO_THR", "AUTO_THR_LIM",
       "AUTO_PITCH_LIM", "AUTO_PRES_P", "AUTO_PRES_TOL",
+    ];
+    const SAUTO_PARAMS = [
+      "SAUTO_ROLL", "SAUTO_PITCH",
     ];
 
     let latestRcChannels = [];
@@ -521,6 +531,7 @@
       $("pidParamGrid").innerHTML = PID_PARAMS.map(buildQuickParamField).join("");
       $("trimParamGrid").innerHTML = TRIM_PARAMS.map(buildQuickParamField).join("");
       $("autoParamGrid").innerHTML = AUTO_PARAMS.map(buildQuickParamField).join("");
+      $("sautoParamGrid").innerHTML = SAUTO_PARAMS.map(buildQuickParamField).join("");
       document.querySelectorAll(".qp-set").forEach((btn) => {
         btn.addEventListener("click", () => setQuickParam(btn.dataset.param));
       });
@@ -543,7 +554,7 @@
 
     function syncQuickParams(parameters) {
       buildQuickParamGrids();
-      const all = [...PID_PARAMS, ...TRIM_PARAMS, ...AUTO_PARAMS];
+      const all = [...PID_PARAMS, ...TRIM_PARAMS, ...AUTO_PARAMS, ...SAUTO_PARAMS];
       for (const name of all) {
         const input = $(fieldId(name));
         const cur = $(curId(name));
@@ -720,6 +731,10 @@
       setTgt("pitchTgt", tgt.pitch_deg, tgt.stale);
       setTgt("thrTgt", tgt.target_thr_pwm, tgt.stale);
 
+      $("rudTgt").textContent =
+        isAuto && auto.rud_tgt_deg != null ? fmt(auto.rud_tgt_deg) : "--";
+      $("rudTgt").classList.toggle("inactive", !isAuto);
+
       $("presCur").textContent = fmt(press.press_abs_hpa);
       $("presTgt").textContent = isAuto && auto.pres_tgt_hpa != null ? fmt(auto.pres_tgt_hpa) : "--";
 
@@ -770,6 +785,7 @@
     $("btnPidSetAll").onclick = () => setQuickParamGroup(PID_PARAMS);
     $("btnTrimSetAll").onclick = () => setQuickParamGroup(TRIM_PARAMS);
     $("btnAutoSetAll").onclick = () => setQuickParamGroup(AUTO_PARAMS);
+    $("btnSautoSetAll").onclick = () => setQuickParamGroup(SAUTO_PARAMS);
     $("btnTrimFromRc").onclick = () => {
       let copied = 0;
       for (const [name, idx] of TRIM_FROM_RC) {

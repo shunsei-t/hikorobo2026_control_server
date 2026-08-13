@@ -98,6 +98,7 @@ class AutoControlSnapshot:
     auto_phase: int | None = None
     yaw_prog_deg: float | None = None
     pres_tgt_hpa: float | None = None
+    rud_tgt_deg: float | None = None
     diagnostics_mono: float = 0.0
 
     @property
@@ -230,6 +231,7 @@ class TelemetryState:
             "auto_phase_label": self.auto_control.auto_phase_label,
             "yaw_prog_deg": self.auto_control.yaw_prog_deg,
             "pres_tgt_hpa": self.auto_control.pres_tgt_hpa,
+            "rud_tgt_deg": self.auto_control.rud_tgt_deg,
             "diagnostics_age_s": self.auto_control.diagnostics_age_s(),
         }
         is_auto = (
