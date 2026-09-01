@@ -3,18 +3,12 @@
 `hikorobo2026_controller` 向けの MAVLink 2 GCS（地上局）です。  
 ESP32 からの UDP テレメトリを受信し、パラメータ読み書き・NVS 保存・簡易 Web UI を提供します。
 
-## 必要条件
+## インストール
+
+手順は [install.md](install.md) を参照してください。
 
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/)
-
-## セットアップ
-
-```bash
-cd hikorobo2026_control_server
-uv sync
-cp .env.example .env   # 必要なら編集
-```
 
 ## 起動
 
