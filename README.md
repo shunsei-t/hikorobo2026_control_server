@@ -63,7 +63,7 @@ uv run python -m hikorobo2026_control_server
 | GET | `/api/telemetry` | 最新テレメトリ JSON |
 | GET | `/api/parameters` | キャッシュ済みパラメータ |
 | POST | `/api/parameters/list` | 全パラメータ要求 |
-| POST | `/api/parameters/set` | `{"name":"ROLL_P","value":1.2}` |
+| POST | `/api/parameters/set` | `{"name":"SAUTO_ROLL_P","value":1.2}` |
 | GET | `/api/parameters/export` | キャッシュ済みパラメータを CSV ダウンロード |
 | GET | `/api/parameters/files` | `params/` 内の CSV 一覧 |
 | POST | `/api/parameters/files/save` | キャッシュを `params/*.csv` に保存 |
@@ -79,7 +79,7 @@ uv run python -m hikorobo2026_control_server
 
 ```csv
 name,value
-ROLL_P,1.0
+SAUTO_ROLL_P,1.0
 AUTO_PITCH,0.0
 ```
 

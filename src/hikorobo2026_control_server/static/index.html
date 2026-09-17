@@ -319,6 +319,42 @@
       gap: 0.5rem;
       margin-top: 0.65rem;
     }
+    .param-cluster {
+      margin-top: 1rem;
+      padding: 0.85rem 0.9rem 0.95rem;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+    }
+    .param-cluster > .param-group-title:first-child {
+      margin-top: 0;
+    }
+    .param-cluster .param-group-title + .param-grid {
+      margin-top: 0;
+    }
+    .param-cluster .param-group-title.sub {
+      margin-top: 0.9rem;
+    }
+    .param-cluster-sauto {
+      border-color: rgba(87, 196, 138, 0.35);
+      background: linear-gradient(135deg, rgba(40, 110, 88, 0.22), transparent 60%);
+    }
+    .param-cluster-sauto > .param-cluster-label {
+      color: #8fd9b0;
+    }
+    .param-cluster-auto {
+      border-color: rgba(110, 170, 210, 0.35);
+      background: linear-gradient(135deg, rgba(45, 90, 120, 0.24), transparent 60%);
+    }
+    .param-cluster-auto > .param-cluster-label {
+      color: #9ec5e0;
+    }
+    .param-cluster-label {
+      margin: 0 0 0.75rem;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
   </style>
 </head>
 <body>
@@ -420,36 +456,48 @@
 
     <section class="tone-quick">
       <h2>Quick Params</h2>
-      <h3 class="param-group-title">PID</h3>
-      <div class="param-grid" id="pidParamGrid"></div>
-      <div class="param-panel-actions">
-        <button type="button" id="btnPidSetAll">Set all PID</button>
-      </div>
-
-      <h3 class="param-group-title" style="margin-top:1rem;">RC_TRIM (PWM µs)</h3>
+      <h3 class="param-group-title">RC_TRIM (PWM µs)</h3>
       <div class="param-grid" id="trimParamGrid"></div>
       <div class="param-panel-actions">
         <button type="button" id="btnTrimFromRc">Copy from RC 1–6</button>
         <button type="button" id="btnTrimSetAll">Set all RC_TRIM</button>
       </div>
 
-      <h3 class="param-group-title" style="margin-top:1rem;">AUTO</h3>
-      <div class="param-grid" id="autoParamGrid"></div>
-      <div class="param-panel-actions">
-        <button type="button" id="btnAutoSetAll">Set all AUTO</button>
+      <div class="param-cluster param-cluster-sauto">
+        <div class="param-cluster-label">SEMI_AUTO</div>
+        <h3 class="param-group-title">PID</h3>
+        <div class="param-grid" id="pidParamGrid"></div>
+        <div class="param-panel-actions">
+          <button type="button" id="btnPidSetAll">Set all SEMI_AUTO PID</button>
+        </div>
+
+        <h3 class="param-group-title sub">Offsets</h3>
+        <div class="param-grid" id="sautoParamGrid"></div>
+        <div class="param-panel-actions">
+          <button type="button" id="btnSautoSetAll">Set all SEMI_AUTO</button>
+        </div>
       </div>
 
-      <h3 class="param-group-title" style="margin-top:1rem;">SEMI_AUTO</h3>
-      <div class="param-grid" id="sautoParamGrid"></div>
-      <div class="param-panel-actions">
-        <button type="button" id="btnSautoSetAll">Set all SEMI_AUTO</button>
+      <div class="param-cluster param-cluster-auto">
+        <div class="param-cluster-label">AUTO</div>
+        <h3 class="param-group-title">PID</h3>
+        <div class="param-grid" id="autoPidParamGrid"></div>
+        <div class="param-panel-actions">
+          <button type="button" id="btnAutoPidSetAll">Set all AUTO PID</button>
+        </div>
+
+        <h3 class="param-group-title sub">Mode</h3>
+        <div class="param-grid" id="autoParamGrid"></div>
+        <div class="param-panel-actions">
+          <button type="button" id="btnAutoSetAll">Set all AUTO</button>
+        </div>
       </div>
     </section>
 
     <section class="tone-param">
       <h2>Set Parameter</h2>
       <div class="row" style="margin-bottom:0;">
-        <input id="paramName" list="paramNames" placeholder="ROLL_P" maxlength="16">
+        <input id="paramName" list="paramNames" placeholder="SAUTO_ROLL_P" maxlength="16">
         <datalist id="paramNames"></datalist>
         <input id="paramValue" type="number" step="any" placeholder="value">
         <button type="button" id="btnParamSet">PARAM_SET</button>
@@ -476,10 +524,10 @@
       "AIL_L", "ELE", "THR", "RUD", "GER", "AIL_R", "SA", "SE",
     ];
 
+    // SemiAuto attitude PID (SAUTO_YAW_* exists on vehicle but unused — omit from Quick Params).
     const PID_PARAMS = [
-      "ROLL_P", "ROLL_I", "ROLL_D",
-      "PITCH_P", "PITCH_I", "PITCH_D",
-      "YAW_P", "YAW_I", "YAW_D",
+      "SAUTO_ROLL_P", "SAUTO_ROLL_I", "SAUTO_ROLL_D",
+      "SAUTO_PITCH_P", "SAUTO_PITCH_I", "SAUTO_PITCH_D",
     ];
     const TRIM_PARAMS = [
       "RC_TRIM_AILL", "RC_TRIM_AILR", "RC_TRIM_ELE",
@@ -494,9 +542,13 @@
       ["RC_TRIM_GEA", 4],
       ["RC_TRIM_AILR", 5],
     ];
+    const AUTO_PID_PARAMS = [
+      "AUTO_ROLL_P", "AUTO_ROLL_I", "AUTO_ROLL_D",
+      "AUTO_PITCH_P", "AUTO_PITCH_I", "AUTO_PITCH_D",
+    ];
     const AUTO_PARAMS = [
-      "AUTO_ROLL", "AUTO_PITCH", "AUTO_RUD", "AUTO_THR", "AUTO_THR_LIM",
-      "AUTO_PITCH_LIM", "AUTO_PRES_P", "AUTO_PRES_TOL",
+      "AUTO_ROLL", "AUTO_PITCH", "AUTO_RUD", "AUTO_THR", "AUTO_THR_CLIM",
+      "AUTO_THR_LIM", "AUTO_PITCH_LIM", "AUTO_PRES_P", "AUTO_PRES_TOL",
     ];
     const SAUTO_PARAMS = [
       "SAUTO_ROLL", "SAUTO_PITCH",
@@ -530,6 +582,7 @@
       if (quickParamsBuilt) return;
       $("pidParamGrid").innerHTML = PID_PARAMS.map(buildQuickParamField).join("");
       $("trimParamGrid").innerHTML = TRIM_PARAMS.map(buildQuickParamField).join("");
+      $("autoPidParamGrid").innerHTML = AUTO_PID_PARAMS.map(buildQuickParamField).join("");
       $("autoParamGrid").innerHTML = AUTO_PARAMS.map(buildQuickParamField).join("");
       $("sautoParamGrid").innerHTML = SAUTO_PARAMS.map(buildQuickParamField).join("");
       document.querySelectorAll(".qp-set").forEach((btn) => {
@@ -554,7 +607,7 @@
 
     function syncQuickParams(parameters) {
       buildQuickParamGrids();
-      const all = [...PID_PARAMS, ...TRIM_PARAMS, ...AUTO_PARAMS, ...SAUTO_PARAMS];
+      const all = [...PID_PARAMS, ...TRIM_PARAMS, ...AUTO_PID_PARAMS, ...AUTO_PARAMS, ...SAUTO_PARAMS];
       for (const name of all) {
         const input = $(fieldId(name));
         const cur = $(curId(name));
@@ -784,6 +837,7 @@
 
     $("btnPidSetAll").onclick = () => setQuickParamGroup(PID_PARAMS);
     $("btnTrimSetAll").onclick = () => setQuickParamGroup(TRIM_PARAMS);
+    $("btnAutoPidSetAll").onclick = () => setQuickParamGroup(AUTO_PID_PARAMS);
     $("btnAutoSetAll").onclick = () => setQuickParamGroup(AUTO_PARAMS);
     $("btnSautoSetAll").onclick = () => setQuickParamGroup(SAUTO_PARAMS);
     $("btnTrimFromRc").onclick = () => {
